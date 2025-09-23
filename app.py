@@ -165,3 +165,15 @@ else:
 # --- 5. FOOTER ---
 st.markdown("---")
 st.markdown('<div class="footer">Developed by Mr. Aashish Tiwari</div>', unsafe_allow_html=True)
+st.markdown("---")
+st.subheader("Was this diagnosis helpful?")
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("👍 Yes, it was helpful"):
+        st.success("Thank you for your feedback!")
+        # You can add code here to log this feedback
+with col2:
+    if st.button("👎 No, this was incorrect"):
+        st.warning("We appreciate your feedback. This helps us improve our AI.")
+        # You can add code here to log the image and prediction for review
+    
