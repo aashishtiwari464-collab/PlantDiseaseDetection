@@ -7,7 +7,7 @@ from PIL import Image
 import gdown
 import os
 # Add this line with your other imports
-from disease_info import DISEASE_INFO
+from Diseases_info import DISEASE_INFO
 
 # --- 1. SETUP AND CONFIGURATION ---
 
