@@ -8,7 +8,7 @@ import gdown
 import os
 
 # NEW IMPORT: This is required for the new advisory section
-from disease_info import DISEASE_INFO
+from Diseases_info import DISEASE_INFO
 
 # --- 1. SETUP AND CONFIGURATION ---
 
