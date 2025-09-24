@@ -8,7 +8,7 @@ import gdown
 import os
 
 # Import the disease information dictionary
-from disease_info import DISEASE_INFO
+from Diseases_info import DISEASE_INFO
 
 # --- 1. SETUP AND CONFIGURATION ---
 
