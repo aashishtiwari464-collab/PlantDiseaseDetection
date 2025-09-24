@@ -7,8 +7,8 @@ from PIL import Image
 import gdown
 import os
 
-# NEW IMPORT: This is required for the new advisory section
-from Diseases_info import DISEASE_INFO
+# Import the disease information dictionary
+from disease_info import DISEASE_INFO
 
 # --- 1. SETUP AND CONFIGURATION ---
 
@@ -124,7 +124,6 @@ else:
 
     # A clear call-to-action button to trigger the diagnosis
     if st.button('Diagnose My Plant', use_container_width=True, type="primary"):
-        # A spinner provides feedback during the prediction process
         with st.spinner('The AI is analyzing the leaf...'):
             label, confidence = predict(img)
 
@@ -138,42 +137,72 @@ else:
         st.markdown(f'<div class="confidence-text">Confidence: <strong>{confidence*100:.2f}%</strong></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # FULLY INTEGRATED ADVISORY SECTION
+        # --- 5. REVISED ADVISORY AND WARNINGS SECTION ---
         st.markdown("---")
-        info = DISEASE_INFO.get(label) # 'label' is the raw output from the model
+        
+        # Display a prominent, general disclaimer for ALL diagnoses
+        st.warning(
+            "**Disclaimer:** This AI diagnosis is for informational purposes only and is not a substitute for professional advice. "
+            "Visual symptoms can be misleading. For a definitive diagnosis and treatment plan, consult a local agricultural extension service or certified agronomist."
+        )
 
-        if info:
-            tab1, tab2, tab3 = st.tabs(["📋 Description", "💊 Treatment", "🛡️ Prevention"])
+        info = DISEASE_INFO.get(label)
+
+        # CRITICAL BUG FIX: Check if the plant is healthy before trying to show disease info
+        if label.endswith("___healthy"):
+            st.balloons()
+            st.success(f"**Great news! The model indicates your {display_label.replace(' Healthy', '')} plant is healthy.**")
+            if info and info.get('maintenance_tips'):
+                st.subheader("Tips for Maintaining Health")
+                for tip in info['maintenance_tips']:
+                    st.markdown(f"- {tip}")
+        elif info:
+            # This block now only runs for non-healthy diagnoses
+            st.subheader(f"Advisory for {display_label}")
+            tab1, tab2, tab3 = st.tabs(["📋 Description & Symptoms", "💊 Treatment Options", "🛡️ Prevention Strategy"])
 
             with tab1:
-                st.subheader("What is this disease?")
-                st.write(info['description'])
+                st.write(info.get('description', 'No description available.'))
                 st.subheader("Common Symptoms")
-                for symptom in info['symptoms']:
-                    st.markdown(f"- {symptom}")
+                symptoms = info.get('symptoms', [])
+                if symptoms:
+                    for symptom in symptoms:
+                        st.markdown(f"- {symptom}")
+                else:
+                    st.write("No symptoms listed.")
 
             with tab2:
                 st.subheader("Organic Solutions")
-                st.success(info['treatment']['organic'])
+                st.info(info.get('treatment', {}).get('organic', 'No organic treatments listed.'))
+                
                 st.subheader("Chemical Solutions")
-                st.warning(info['treatment']['chemical'])
+                # SPECIFIC AND DETAILED CHEMICAL USE WARNING
+                st.error(
+                    "**⚠️ CRITICAL SAFETY WARNING ⚠️**\n\n"
+                    "Chemical treatments should be a **last resort** within an Integrated Pest Management (IPM) strategy. "
+                    "If you must use chemicals:\n\n"
+                    "1.  **Verify the Diagnosis:** Get professional confirmation before you spray.\n"
+                    "2.  **Follow Local Laws:** Chemical use is highly regulated. Check regulations for Madhya Pradesh.\n"
+                    "3.  **Read the Label:** The label is the law. Follow all instructions for mixing, application, and Personal Protective Equipment (PPE).\n"
+                    "4.  **Protect Pollinators:** Do not spray when bees and other beneficial insects are active."
+                )
+                st.warning(info.get('treatment', {}).get('chemical', 'No chemical treatments listed.'))
                 
             with tab3:
                 st.subheader("How to Prevent This")
-                st.info(info['prevention'])
+                st.info(info.get('prevention', 'No prevention information available.'))
+        else:
+            st.error("Could not retrieve advisory information for this diagnosis.")
 
-# --- 5. FOOTER ---
-st.markdown("---")
-st.markdown('<div class="footer">Developed by Mr. Aashish Tiwari</div>', unsafe_allow_html=True)
+# --- 6. FOOTER AND FEEDBACK ---
 st.markdown("---")
 st.subheader("Was this diagnosis helpful?")
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("👍 Yes, it was helpful"):
+feedback_cols = st.columns(2)
+with feedback_cols[0]:
+    if st.button("👍 Yes, it was helpful", use_container_width=True):
         st.success("Thank you for your feedback!")
-        # You can add code here to log this feedback
-with col2:
-    if st.button("👎 No, this was incorrect"):
+with feedback_cols[1]:
+    if st.button("👎 No, this was incorrect", use_container_width=True):
         st.warning("We appreciate your feedback. This helps us improve our AI.")
-        # You can add code here to log the image and prediction for review
-    
+
+st.markdown('<div class="footer">Developed by Mr. Aashish Tiwari</div>', unsafe_allow_html=True)
