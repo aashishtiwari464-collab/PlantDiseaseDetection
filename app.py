@@ -15,20 +15,10 @@ st.set_page_config(page_title="AI Plant Doctor", page_icon="🌿", layout="wide"
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
-.stApp {
-    background: linear-gradient(135deg, #eef2f3, #dfe9f3);
-}
-.header {
-    text-align:center;
-    padding:20px;
-}
-.header h1 {
-    font-size:2.5rem;
-    color:#1d3557;
-}
-.header p {
-    color:#6c757d;
-}
+.stApp { background: linear-gradient(135deg, #eef2f3, #dfe9f3); }
+.header { text-align:center; padding:20px; }
+.header h1 { font-size:2.5rem; color:#1d3557; }
+.header p { color:#6c757d; }
 .card {
     background: rgba(255,255,255,0.9);
     border-radius:16px;
@@ -91,10 +81,20 @@ def predict(img):
 
     return labels[idx], conf
 
+# ---------------- SAFE DATA HANDLER ----------------
+def safe_display_list(data):
+    if isinstance(data, list):
+        for item in data:
+            st.markdown(f"- {item}")
+    elif isinstance(data, str):
+        st.markdown(f"- {data}")
+    else:
+        st.write("No data available.")
+
 # ---------------- LAYOUT ----------------
 col1, col2 = st.columns(2)
 
-# -------- LEFT SIDE --------
+# -------- LEFT --------
 with col1:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📤 Upload Leaf Image")
@@ -102,7 +102,6 @@ with col1:
     st.markdown('</div>', unsafe_allow_html=True)
 
     if file:
-        # file size check
         if file.size > 5 * 1024 * 1024:
             st.error("❌ File too large (max 5MB)")
             st.stop()
@@ -114,14 +113,10 @@ with col1:
             st.markdown('</div>', unsafe_allow_html=True)
 
         except UnidentifiedImageError:
-            st.error("❌ Invalid image file. Upload JPG/PNG.")
+            st.error("❌ Invalid image file")
             st.stop()
 
-        except Exception as e:
-            st.error(f"❌ Error reading image: {e}")
-            st.stop()
-
-# -------- RIGHT SIDE --------
+# -------- RIGHT --------
 with col2:
     if file:
         if st.button("🔍 Diagnose", use_container_width=True):
@@ -148,26 +143,31 @@ with col2:
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # -------- DISEASE INFO --------
+            # -------- INFO --------
             info = DISEASE_INFO.get(label)
 
-            if info:
-                tab1, tab2, tab3 = st.tabs(["📋 Info","💊 Treatment","🛡 Prevention"])
+            if not info:
+                st.error("No data available for this disease.")
+                st.stop()
 
-                with tab1:
-                    st.write(info.get("description",""))
-                    for s in info.get("symptoms",[]):
-                        st.markdown(f"- {s}")
+            tab1, tab2, tab3 = st.tabs(["📋 Info","💊 Treatment","🛡 Prevention"])
 
-                with tab2:
-                    st.subheader("🌿 Organic")
-                    st.info(info.get("treatment",{}).get("organic","N/A"))
+            with tab1:
+                description = info.get("description", "No description available.")
+                st.write(description)
 
-                    st.subheader("🧪 Chemical")
-                    st.warning(info.get("treatment",{}).get("chemical","N/A"))
+                st.subheader("Symptoms")
+                safe_display_list(info.get("symptoms"))
 
-                with tab3:
-                    st.info(info.get("prevention",""))
+            with tab2:
+                st.subheader("🌿 Organic")
+                st.info(info.get("treatment", {}).get("organic", "N/A"))
+
+                st.subheader("🧪 Chemical")
+                st.warning(info.get("treatment", {}).get("chemical", "N/A"))
+
+            with tab3:
+                st.info(info.get("prevention", "No prevention info"))
 
 # ---------------- FOOTER ----------------
 st.markdown("""
