@@ -3,7 +3,7 @@ import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 import json
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import gdown
 import os
 
@@ -12,40 +12,36 @@ from Diseases_info import DISEASE_INFO
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="AI Plant Doctor", page_icon="🌿", layout="wide")
 
-# ---------------- PREMIUM CSS ----------------
+# ---------------- CSS ----------------
 st.markdown("""
 <style>
 .stApp {
     background: linear-gradient(135deg, #eef2f3, #dfe9f3);
 }
-
 .header {
     text-align:center;
-    padding:25px;
+    padding:20px;
 }
 .header h1 {
-    font-size:2.8rem;
+    font-size:2.5rem;
     color:#1d3557;
 }
 .header p {
     color:#6c757d;
 }
-
 .card {
-    background: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.9);
     border-radius:16px;
     padding:20px;
     box-shadow:0 8px 25px rgba(0,0,0,0.1);
     margin-bottom:20px;
 }
-
 .result {
     text-align:center;
-    font-size:1.6rem;
+    font-size:1.5rem;
     color:#e63946;
     font-weight:bold;
 }
-
 .footer {
     text-align:center;
     color:gray;
@@ -69,7 +65,7 @@ def load_model_file():
     PATH = "model.keras"
 
     if not os.path.exists(PATH):
-        with st.spinner("Downloading model..."):
+        with st.spinner("Downloading AI model..."):
             gdown.download(f"https://drive.google.com/uc?id={MODEL_ID}", PATH)
 
     return load_model(PATH)
@@ -95,28 +91,46 @@ def predict(img):
 
     return labels[idx], conf
 
-# ---------------- UI ----------------
+# ---------------- LAYOUT ----------------
 col1, col2 = st.columns(2)
 
+# -------- LEFT SIDE --------
 with col1:
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("Upload Leaf Image")
+    st.subheader("📤 Upload Leaf Image")
     file = st.file_uploader("", type=["jpg","jpeg","png"])
     st.markdown('</div>', unsafe_allow_html=True)
 
     if file:
-        img = Image.open(file).convert("RGB")
-        st.image(img, caption="Uploaded Image")
+        # file size check
+        if file.size > 5 * 1024 * 1024:
+            st.error("❌ File too large (max 5MB)")
+            st.stop()
 
+        try:
+            img = Image.open(file).convert("RGB")
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.image(img, caption="Uploaded Image", use_column_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        except UnidentifiedImageError:
+            st.error("❌ Invalid image file. Upload JPG/PNG.")
+            st.stop()
+
+        except Exception as e:
+            st.error(f"❌ Error reading image: {e}")
+            st.stop()
+
+# -------- RIGHT SIDE --------
 with col2:
     if file:
-        if st.button("Diagnose", use_container_width=True):
+        if st.button("🔍 Diagnose", use_container_width=True):
 
-            with st.spinner("Analyzing..."):
+            with st.spinner("Analyzing plant..."):
                 label, conf = predict(img)
 
             if conf < 0.6:
-                st.warning("Low confidence. Try clearer image.")
+                st.warning("⚠️ Low confidence. Try clearer image.")
                 st.stop()
 
             name = label.replace("___"," ").replace("_"," ").title()
@@ -128,16 +142,17 @@ with col2:
             st.progress(conf)
 
             if "healthy" in label.lower():
-                st.success("Plant is Healthy")
+                st.success("🟢 Plant is Healthy")
             else:
-                st.error("Disease Detected")
+                st.error("🔴 Disease Detected")
 
             st.markdown('</div>', unsafe_allow_html=True)
 
+            # -------- DISEASE INFO --------
             info = DISEASE_INFO.get(label)
 
             if info:
-                tab1, tab2, tab3 = st.tabs(["Info","Treatment","Prevention"])
+                tab1, tab2, tab3 = st.tabs(["📋 Info","💊 Treatment","🛡 Prevention"])
 
                 with tab1:
                     st.write(info.get("description",""))
@@ -145,8 +160,11 @@ with col2:
                         st.markdown(f"- {s}")
 
                 with tab2:
-                    st.info(info.get("treatment",{}).get("organic",""))
-                    st.warning(info.get("treatment",{}).get("chemical",""))
+                    st.subheader("🌿 Organic")
+                    st.info(info.get("treatment",{}).get("organic","N/A"))
+
+                    st.subheader("🧪 Chemical")
+                    st.warning(info.get("treatment",{}).get("chemical","N/A"))
 
                 with tab3:
                     st.info(info.get("prevention",""))
@@ -154,6 +172,6 @@ with col2:
 # ---------------- FOOTER ----------------
 st.markdown("""
 <div class="footer">
-Built by Aashish Tiwari | AI Plant Doctor
+🌿 Built by Aashish Tiwari | AI Plant Doctor
 </div>
 """, unsafe_allow_html=True)
