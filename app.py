@@ -189,7 +189,7 @@ st.markdown("""
 <div class="footer">
 🌿 Built by Aashish Tiwari | Agri AI Solutions
 </div>
-""", unsafe_allow_html=True)}
+""", unsafe_allow_html=True)
 
 /* Cards */
 .section-card {
