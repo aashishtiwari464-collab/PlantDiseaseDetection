@@ -7,34 +7,200 @@ from PIL import Image
 import gdown
 import os
 
-# Import the disease information dictionary
 from Diseases_info import DISEASE_INFO
 
-# --- 1. SETUP AND CONFIGURATION ---
-
-# Set page configuration - This MUST be the first Streamlit command
+# ------------------ PAGE CONFIG ------------------
 st.set_page_config(
-    page_title="Plant Disease Diagnosis",
+    page_title="AI Plant Doctor",
     page_icon="🌿",
     layout="centered"
 )
 
-# Inject custom CSS for a professional look
+# ------------------ CUSTOM CSS ------------------
 st.markdown("""
-    <style>
-        .stApp {
-            background-color: #F0F2F6;
-        }
-        .result-card {
-            background-color: #FFFFFF;
-            border-radius: 12px;
-            padding: 25px;
-            margin-top: 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #264653;
-            text-align: center;
+<style>
+.stApp {
+    background-color: #f4f6f9;
+}
+
+/* Hero Section */
+.hero {
+    text-align:center;
+    padding:20px;
+}
+.hero h1 {
+    font-size:2.5rem;
+    color:#264653;
+}
+.hero p {
+    color:#6c757d;
+}
+
+/* Cards */
+.section-card {
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    margin-bottom:20px;
+    box-shadow:0 6px 15px rgba(0,0,0,0.08);
+}
+
+/* Result Styling */
+.result-title {
+    text-align:center;
+    font-size:2rem;
+    color:#E76F51;
+    font-weight:bold;
+}
+
+.footer {
+    text-align:center;
+    padding:20px;
+    color:gray;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------ HERO ------------------
+st.markdown("""
+<div class="hero">
+    <h1>🌿 AI Plant Doctor</h1>
+    <p>Instant disease detection with smart treatment guidance</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ------------------ MODEL LOAD ------------------
+@st.cache_resource
+def download_and_load_model():
+    MODEL_ID = "1ozwUc7E-CO88WAQaiKXc8eG6G533sVpB"
+    MODEL_PATH = "final_model.keras"
+
+    if not os.path.exists(MODEL_PATH):
+        with st.spinner("Downloading AI model..."):
+            gdown.download(f"https://drive.google.com/uc?id={MODEL_ID}", MODEL_PATH, quiet=False)
+
+    return load_model(MODEL_PATH)
+
+@st.cache_data
+def load_labels():
+    with open("class_indices.json", "r") as f:
+        class_indices = json.load(f)
+    return {v: k for k, v in class_indices.items()}
+
+model = download_and_load_model()
+labels = load_labels()
+
+# ------------------ PREDICTION ------------------
+def predict(img):
+    img = img.resize((128, 128))
+    img_array = image.img_to_array(img) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
+
+    prediction = model.predict(img_array)[0]
+    class_index = np.argmax(prediction)
+    confidence = float(np.max(prediction))
+
+    return labels[class_index], confidence
+
+# ------------------ LANGUAGE ------------------
+language = st.selectbox("🌐 Select Language", ["English", "Hindi"])
+
+# ------------------ UPLOAD SECTION ------------------
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+
+uploaded_file = st.file_uploader(
+    "📤 Upload a plant leaf image",
+    type=["jpg", "jpeg", "png"]
+)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ------------------ IMAGE PREVIEW ------------------
+if uploaded_file:
+    img = Image.open(uploaded_file).convert("RGB")
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.image(img, caption="📷 Uploaded Leaf Image", use_column_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ------------------ BUTTON ------------------
+    if st.button("🔍 Diagnose Plant", use_container_width=True):
+
+        with st.spinner("Analyzing..."):
+            label, confidence = predict(img)
+
+        display_label = label.replace('___', ' ').replace('_', ' ').title()
+
+        # Confidence threshold
+        if confidence < 0.6:
+            st.warning("⚠️ Low confidence. Try a clearer image.")
+            st.stop()
+
+        # ------------------ RESULT ------------------
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+
+        st.markdown(f"<div class='result-title'>{display_label}</div>", unsafe_allow_html=True)
+
+        st.metric("Confidence", f"{confidence*100:.2f}%")
+        st.progress(confidence)
+
+        if "healthy" in label.lower():
+            st.success("🟢 Plant is Healthy")
+        else:
+            st.error("🔴 Disease Detected")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # ------------------ DISCLAIMER ------------------
+        st.warning("This is an AI-based prediction. Consult an expert for confirmation.")
+
+        # ------------------ DISEASE INFO ------------------
+        info = DISEASE_INFO.get(label)
+
+        if label.endswith("___healthy"):
+            if info and info.get("maintenance_tips"):
+                st.markdown('<div class="section-card">', unsafe_allow_html=True)
+                st.subheader("🌱 Maintenance Tips")
+                for tip in info["maintenance_tips"]:
+                    st.markdown(f"- {tip}")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        elif info:
+            tab1, tab2, tab3 = st.tabs(["📋 Symptoms", "💊 Treatment", "🛡 Prevention"])
+
+            with tab1:
+                st.write(info.get("description", "No info"))
+                for s in info.get("symptoms", []):
+                    st.markdown(f"- {s}")
+
+            with tab2:
+                st.markdown("### 🌿 Organic")
+                st.info(info.get("treatment", {}).get("organic", "N/A"))
+
+                st.markdown("### 🧪 Chemical")
+                st.warning(info.get("treatment", {}).get("chemical", "N/A"))
+
+            with tab3:
+                st.info(info.get("prevention", "No info"))
+
+# ------------------ HOW IT WORKS ------------------
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+
+st.subheader("ℹ️ How it works")
+st.markdown("""
+1. Upload a clear leaf image  
+2. Click Diagnose  
+3. Get instant AI results  
+""")
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ------------------ FOOTER ------------------
+st.markdown("""
+<div class="footer">
+    🌿 Built by Aashish Tiwari | Agri AI Solutions
+</div>
+""", unsafe_allow_html=True)            text-align: center;
         }
         .stMarkdown p {
             text-align: center;
