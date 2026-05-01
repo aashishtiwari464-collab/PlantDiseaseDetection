@@ -9,32 +9,106 @@ import os
 
 from Diseases_info import DISEASE_INFO
 
-# ------------------ PAGE CONFIG ------------------
-st.set_page_config(
-    page_title="AI Plant Doctor",
-    page_icon="🌿",
-    layout="centered"
-)
+# ------------------ CONFIG ------------------
+st.set_page_config(page_title="AI Plant Doctor", page_icon="🌿")
 
-# ------------------ CUSTOM CSS ------------------
+# ------------------ CSS ------------------
 st.markdown("""
 <style>
-.stApp {
-    background-color: #f4f6f9;
-}
-.hero {
-    text-align:center;
-    padding:20px;
-}
-.hero h1 {
-    font-size:2.5rem;
-    color:#264653;
-}
-.hero p {
-    color:#6c757d;
-}
+.stApp {background-color:#f4f6f9;}
 .section-card {
     background:white;
+    padding:20px;
+    border-radius:12px;
+    margin-bottom:20px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.08);
+}
+.title {text-align:center; color:#264653;}
+.footer {text-align:center; color:gray; padding:20px;}
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------ HEADER ------------------
+st.markdown("<h1 class='title'>🌿 AI Plant Doctor</h1>", unsafe_allow_html=True)
+
+# ------------------ MODEL ------------------
+@st.cache_resource
+def load_model_file():
+    MODEL_ID = "1ozwUc7E-CO88WAQaiKXc8eG6G533sVpB"
+    PATH = "model.keras"
+
+    if not os.path.exists(PATH):
+        gdown.download(f"https://drive.google.com/uc?id={MODEL_ID}", PATH)
+
+    return load_model(PATH)
+
+@st.cache_data
+def load_labels():
+    with open("class_indices.json") as f:
+        data = json.load(f)
+    return {v:k for k,v in data.items()}
+
+model = load_model_file()
+labels = load_labels()
+
+# ------------------ PREDICT ------------------
+def predict(img):
+    img = img.resize((128,128))
+    arr = image.img_to_array(img)/255.0
+    arr = np.expand_dims(arr,0)
+
+    pred = model.predict(arr)[0]
+    idx = np.argmax(pred)
+    conf = float(np.max(pred))
+
+    return labels[idx], conf
+
+# ------------------ UPLOAD ------------------
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+file = st.file_uploader("Upload leaf image", type=["jpg","png","jpeg"])
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ------------------ MAIN ------------------
+if file:
+    img = Image.open(file)
+
+    st.image(img, caption="Uploaded Image")
+
+    if st.button("Diagnose"):
+
+        label, conf = predict(img)
+
+        if conf < 0.6:
+            st.warning("Low confidence. Try clearer image.")
+            st.stop()
+
+        name = label.replace("_"," ").replace("___"," ")
+
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.subheader(name)
+        st.metric("Confidence", f"{conf*100:.2f}%")
+        st.progress(conf)
+
+        if "healthy" in label.lower():
+            st.success("Plant is healthy")
+        else:
+            st.error("Disease detected")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        info = DISEASE_INFO.get(label)
+
+        if info:
+            st.subheader("Details")
+
+            st.write(info.get("description",""))
+
+            st.write("Symptoms")
+            for s in info.get("symptoms",[]):
+                st.write("-",s)
+
+# ------------------ FOOTER ------------------
+st.markdown("<div class='footer'>Built by Aashish Tiwari</div>", unsafe_allow_html=True)    background:white;
     padding:20px;
     border-radius:15px;
     margin-bottom:20px;
