@@ -20,7 +20,7 @@ st.markdown("""
 .header h1 { font-size:2.5rem; color:#1d3557; }
 .header p { color:#6c757d; }
 .card {
-    background: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.92);
     border-radius:16px;
     padding:20px;
     box-shadow:0 8px 25px rgba(0,0,0,0.1);
@@ -81,8 +81,8 @@ def predict(img):
 
     return labels[idx], conf
 
-# ---------------- SAFE DATA HANDLER ----------------
-def safe_display_list(data):
+# ---------------- SAFE HELPERS ----------------
+def show_list_or_text(data):
     if isinstance(data, list):
         for item in data:
             st.markdown(f"- {item}")
@@ -90,6 +90,27 @@ def safe_display_list(data):
         st.markdown(f"- {data}")
     else:
         st.write("No data available.")
+
+def show_treatment(treatment):
+    st.subheader("🌿 Organic")
+    if isinstance(treatment, dict):
+        st.info(treatment.get("organic", "N/A"))
+    elif isinstance(treatment, str):
+        st.info(treatment)
+    else:
+        st.info("N/A")
+
+    st.subheader("🧪 Chemical")
+    if isinstance(treatment, dict):
+        st.warning(treatment.get("chemical", "N/A"))
+    else:
+        st.warning("No chemical treatment needed.")
+
+def show_prevention(prevention):
+    if isinstance(prevention, str):
+        st.info(prevention)
+    else:
+        st.write("No prevention info available.")
 
 # ---------------- LAYOUT ----------------
 col1, col2 = st.columns(2)
@@ -153,21 +174,15 @@ with col2:
             tab1, tab2, tab3 = st.tabs(["📋 Info","💊 Treatment","🛡 Prevention"])
 
             with tab1:
-                description = info.get("description", "No description available.")
-                st.write(description)
-
+                st.write(info.get("description", "No description available."))
                 st.subheader("Symptoms")
-                safe_display_list(info.get("symptoms"))
+                show_list_or_text(info.get("symptoms"))
 
             with tab2:
-                st.subheader("🌿 Organic")
-                st.info(info.get("treatment", {}).get("organic", "N/A"))
-
-                st.subheader("🧪 Chemical")
-                st.warning(info.get("treatment", {}).get("chemical", "N/A"))
+                show_treatment(info.get("treatment"))
 
             with tab3:
-                st.info(info.get("prevention", "No prevention info"))
+                show_prevention(info.get("prevention"))
 
 # ---------------- FOOTER ----------------
 st.markdown("""
