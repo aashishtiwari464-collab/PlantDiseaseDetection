@@ -201,7 +201,7 @@ st.markdown("""
     🌿 Built by Aashish Tiwari | Agri AI Solutions
 </div>
 """, unsafe_allow_html=True)            text-align: center;
-        }
+        
         .stMarkdown p {
             text-align: center;
             color: #2A9D8F;
